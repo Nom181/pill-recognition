@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhận Dạng Thuốc</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            width: 480px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2d6a4f;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+
+        p.subtitle {
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .upload-area {
+            border: 2px dashed #2d6a4f;
+            border-radius: 12px;
+            padding: 40px 20px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: background 0.2s;
+        }
+
+        .upload-area:hover { background: #f0fff4; }
+
+        .upload-area img#preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            display: none;
+            margin: 0 auto;
+        }
+
+        .upload-area p { color: #aaa; font-size: 14px; }
+
+        input[type="file"] { display: none; }
+
+        button {
+            background: #2d6a4f;
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        button:hover { background: #1b4332; }
+        button:disabled { background: #aaa; cursor: not-allowed; }
+
+        .result {
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d8f3dc;
+            border: 1px solid #2d6a4f;
+        }
+
+        .result.error {
+            background: #ffe0e0;
+            border: 1px solid #e63946;
+        }
+
+        .result h2 {
+            color: #2d6a4f;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .result .confidence {
+            color: #555;
+            font-size: 14px;
+        }
+
+        .loading {
+            display: none;
+            color: #2d6a4f;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💊 Nhận Dạng Thuốc</h1>
+        <p class="subtitle">Tải ảnh viên thuốc lên để nhận dạng</p>
+
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <img id="preview" src="" alt="preview"/>
+            <p id="uploadText">📷 Click để chọn ảnh thuốc</p>
+        </div>
+
+        <input type="file" id="fileInput" accept="image/*" onchange="previewImage(event)"/>
+
+        <button id="btnPredict" onclick="predictPill()" disabled>
+            🔍 Nhận Dạng
+        </button>
+
+        <div class="loading" id="loading">⏳ Đang phân tích ảnh...</div>
+
+        <div class="result" id="result">
+            <h2 id="resultLabel"></h2>
+            <p class="confidence" id="resultConfidence"></p>
+        </div>
+    </div>
+
+    <script>
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const preview = document.getElementById('preview');
+            const uploadText = document.getElementById('uploadText');
+            const btn = document.getElementById('btnPredict');
+
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+            uploadText.style.display = 'none';
+            btn.disabled = false;
+
+            document.getElementById('result').style.display = 'none';
+        }
+
+        async function predictPill() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) return;
+
+            const btn = document.getElementById('btnPredict');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+
+            btn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                result.className = 'result success';
+                document.getElementById('resultLabel').textContent = '✅ ' + data.label;
+                document.getElementById('resultConfidence').textContent = 
+                    'Độ chính xác: ' + data.confidence + '%';
+                result.style.display = 'block';
+
+            } catch (error) {
+                result.className = 'result error';
+                document.getElementById('resultLabel').textContent = '❌ Có lỗi xảy ra';
+                document.getElementById('resultConfidence').textContent = error.message;
+                result.style.display = 'block';
+            }
+
+            btn.disabled = false;
+            loading.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
